@@ -889,8 +889,6 @@ If we do not specify a condition, then everything in the table will be deleted.
 
 ### JOINS
 
-#### Inner Joins
-
 We merge 2 tables using the keyword JOIN. JOIN by default is inner join. 
 
 Along with the customers table, we also have an orders table with columns order_id, customer_id, order_date, status, comments, shipped_date, shipper_id.
@@ -929,13 +927,157 @@ We can join across databases. In inner join, we dont need the columns on which w
 
 There are two tables orders and customers. For each row in orders, it will check all the rows in the customers. When the attributes we are joining on match, it creates a final output.
 
+#### Inner Joins
+
+Consider a students and batches table.
+```
+Students
+id  |   Name    |   gender  |   batch_id
+1       Naman       M           1
+2       Alok        M           1
+3       Sameer      M           NULL
+
+Batches
+id  |   Name    |   Count_of_classes
+1      Aug21Int         100
+2      Nov21Int         120
+```
+We want to create an output table with columns Name and Batch_name. 
+```
+SELECT st.Name, btch.Name
+FROM Students st
+JOIN Batches btch
+ON st.batch_id = btch.id;
+```
+The following is the algorithm of inner join.
+```
+for every row1 in table1:
+    for every row2 in table2:
+        if row1.batch_id = row2.id:
+            ADD NEW ROW IN JOIN
+```
+
+If any attribute, used after the ON keyword, in the two tables is NULL, then that record will not be in the record.
+
+Consider 3 tables students, batches and teachers.
+```
+students
+id  |   name    |   batch_id
+
+batches
+id  |   name    |   teacher_id
+
+teachers
+id  |   name
+```
+We want a table with student name and corresponding teacher name. To get this table, we have to first join students and batches on batch_id and then the resultant table has to be joined with teachers table to get the teachers name.
+```
+SELECT s.name, t.name
+FROM students s
+JOIN batches b
+ON s.batch_id = b.id
+JOIN teachers t
+ON b.teacher_id = t.id;
+```
+The intermediate table will have the columns students_id, students_name, batch_id, batch_name, batch_teachers_id.
+
+We can match on multiple conditions.
+```
+SELECT s.name, t.name
+FROM students s
+JOIN batches b
+ON s.batch_id = b.id
+AND s.name = 'Naman'
+JOIN teachers t
+ON b.teacher_id = t.id;
+```
+
 #### Outer Joins
+
+Outer joins are of two types, left outer join and right outer join.
 
 ##### Left
 
+In RDBMS, tables are analogous to sets. When we perform an inner join of two tables based on an attribute, we are selecting the intersection of two tables.
+
+In case of a left outer join, we are selecting the entire left table whether it has rows intersecting with the right table or not.
+
+Consider the earlier students and batches table.
+```
+Students
+id  |   Name    |   gender  |   batch_id
+1       Naman       M           1
+2       Alok        M           1
+3       Sameer      M           NULL
+
+Batches
+id  |   Name    |   Count_of_classes
+1      Aug21Int         100
+2      Nov21Int         120
+```
+We want an output table with all the student's names in it. This cannot be done using inner join. 
+
+To get the output table, we have to run a query with left outer join.
+```
+SELECT s.name, b.name
+FROM students s
+LEFT OUTER JOIN batches b
+ON s.batch_id = b.id
+```
+
 ##### Right
 
-##### Self
+In case of a right outer join, we are selecting the entire right table whether it has rows intersecting with the left table or not.
+
+Consider the earlier students and batches table.
+```
+Students
+id  |   Name    |   gender  |   batch_id
+1       Naman       M           1
+2       Alok        M           1
+3       Sameer      M           NULL
+
+Batches
+id  |   Name    |   Count_of_classes
+1      Aug21Int         100
+2      Nov21Int         120
+```
+We want an output table with all the batches in it.
+
+To get the output table, we have to run a query with right outer join.
+```
+SELECT s.name, b.name
+FROM students s
+RIGHT OUTER JOIN batches b
+ON s.batch_id = b.id
+```
+
+#### Full Joins
+
+Full joins output a table that has the rows of both left and right table. The keyword used here is FULL JOIN.
+
+#### Cross Joins
+
+![Cross Join](images/CrossJoin.png)
+
+```
+SELECT *
+FROM students
+CROSS JOIN batches;
+```
+
+```
+SELECT *
+FROM students, batches;
+```
+
+```
+SELECT *
+FROM students s, batches b
+WHERE s.batch_id = b.id;
+```
+
+#### Self
 
 Consider an employees table in a database called sql_hr. The columns in the employees table are employee_id, first_name, last_name, job_title, salary, reports_to, office_id. The reports_to column will have the employee_id of the employee's boss.
 
@@ -948,9 +1090,69 @@ ON emp.reports_to = mgr.employee_id;
 ```
 We need alias for the tables in case of self join, else it will not be possibe to differentiate between the two tables.
 
+Behind the scenes, a copy of the table is created.
+
+#### USING Clause
+
+These days, it is good practice to keep the names of the columns in a table specific.
+```
+students
+student_id  |   student_name    |   gender  |   batch_id
+1       Naman       M           1
+2       Alok        M           1
+3       Sameer      M           NULL
+
+batches
+batch_id  |   batch_name    |   count_of_classes
+1      Aug21Int         100
+2      Nov21Int         120
+```
+Now we can run a query to join with USING clause.
+```
+SELECT *
+FROM students s
+join batches b
+USING (batch_id);
+```
+We can put multiple columns in USING.
+
+#### Natural Joins
+
+We can join two tables on the same column name using NATURAL JOIN.
+```
+SELECT *
+FROM students
+NATURAL JOIN batches;
+```
 #### Implicit Joins
 
+### Aggregate Queries
 
+Sometimes we are not interested in getting particular rows, but instead we are interested in getting a summary of data. These can be getting the max(), min(), avg(), sum(), count(). These functions are called aggregate functions. 
+
+For example, consider a students table with the columns id, name, amount, psp.
+```
+students
+id  | name  |   amount  |   psp
+```
+To get the max psp in a batch, we run a query using the aggregate function.
+```
+SELECT Max(psp)
+FROM students;
+```
+
+Aggregate functions ignore NULL values. 
+
+To get the count of students in scaler, we can use the aggregate function count()
+```
+SELECT count(id)
+FROM students;
+```
+```
+SELECT count(*)
+FROM students;
+```
+We cannot run the count function on amount column, because aggregate functions ignore NULL values, and amount column may have NULL value.
 
 
 ## Indexing
