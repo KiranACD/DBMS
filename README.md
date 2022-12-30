@@ -1104,8 +1104,8 @@ student_id  |   student_name    |   gender  |   batch_id
 
 batches
 batch_id  |   batch_name    |   count_of_classes
-1      Aug21Int         100
-2      Nov21Int         120
+    1          Aug21Int         100
+    2          Nov21Int         120
 ```
 Now we can run a query to join with USING clause.
 ```
@@ -1154,7 +1154,184 @@ FROM students;
 ```
 We cannot run the count function on amount column, because aggregate functions ignore NULL values, and amount column may have NULL value.
 
+**Grouping of Rows**
 
+Consider a students table with columns id, batch_id and amount_paid.
+```
+students
+id  |   batch_id    |   amount_paid
+1          1                100
+2          1                200
+3          2                150
+4          1                200
+5          3                100
+```
+We want a table showing the total amount paid batch-wise.
+```
+batch_id    |   total_paid
+    1              500
+    2              150    
+    3              100
+```
+
+To get this data, we need to group by the batch_id.
+```
+SELECT batch_id, sum(amount_paid)
+FROM students
+GROUP BY batch_id;
 ## Indexing
+```
+In the query, we can only include columns that are part of the group. In the above example, we cannot include the id in the columns to output because each batch_id has one row, but some batch_ids have more than one rows, which is not possible to include in one row. 
+
+When using group by in a query, the table in split into multiple tables of each value of the column the data is grouped on. 
+
+Consider a table called persons which contain duplicate emails. We want to get the duplicate emails.
+```
+SELECT p.email
+FROM persons p
+GROUP BY p.email
+HAVING count(p.email) > 1;
+
+SELECT p.email
+FROM persons p
+GROUP BY p.email
+HAVING count(*) > 1;
+```
+Both these queries work. The second query also works because it is counting the number of rows in each table of distinct emails. The table of emails with duplicate values will have greater than 1 row. 
+
+**Grouping multiple columns**
+
+Suppose we have a class_ratings table with columns batch_id, instrutor_id, class_id and average_rating.
+```
+class_ratings
+batch_id    |   instructor_id   |   class_id    |   average_rating
+```
+We want the average rating of each instructor for each batch. 
+```
+batch_id    |   instructor_id   |   average_rating
+```
+The query for this will be to group by multiple columns.
+```
+SELECT batch_id, instructor_id, avg(average_rating)
+FROM class_ratings
+GROUP BY batch_id, instructor_id;
+```
+
+**HAVING Clause**
+
+Say we want to get a table of instructors that have an average rating < 4.
+```
+SELECT batch_id, instructor_id, avg(average_rating) as avc
+FROM class_ratings
+GROUP BY batch_id, instructor_id
+HAVING avc < 4;
+```
+We cannot use the WHERE clause in a query with GROUP BY. We can use WHERE clause before GROUP BY, but not after.
+
+### Subqueries
+
+Subquery is a query within a query.
+
+Consider two tables students and universities.
+```
+Students
+id  |   name    |   university_name
+
+universities
+id  |   name    |   percentage
+```
+We want a list of students who are in universities with percentage > 80.
+```
+SELECT *
+FROM students
+where university_name in (
+    SELECT name
+    FROM universities
+    WHERE percentage > 80
+);
+```
+
+Consider two tables students and instructors.
+```
+students
+id  |   name    |   instructors_id
+
+instructors
+id  |   years_of_experience
+```
+We want to get students who are being taught by instrutors with greater than 4 years of experience.
+```
+SELECT *
+FROM students
+WHERE instuctors_id in (
+    SELECT id
+    FROM instructors
+    WHERE years_of_experience > 4
+);
+```
+
+If subquery returns a single value, then we can use equal to '=' symbol.
+
+Consider a table of students with columns id, name, university_id and psp. 
+```
+students
+id  |   name    |   university_id     |    psp
+1         A               31                87
+2         B               1                 90
+3         C               2                 83
+4         D               31                88
+```
+We want students whose psp > the all the psps of students who have university_id = 31.
+```
+SELECT *
+FROM students
+WHERE psp > ALL (
+    SELECT max(psp)
+    FROM students
+    GROUP BY university_id
+    HAVING university_id = 31
+);
+
+SELECT *
+FROM students
+WHERE psp > ALL (
+    SELECT psp
+    FROM students
+    WHERE university_id = 31
+);
+```
+
+We use ALL when there is a comparison operator like >, <, >=, <=, !=.
+
+Like ALL, there is also ANY keyword. 
+```
+SELECT *
+FROM students
+WHERE psp > ANY (
+    SELECT psp
+    FROM students
+    WHERE university_id = 31
+);
+```
+Given a list of psps, we just need the psp to have a value greater than any of the values in the list.
+
+#### Correlated Subsqueries
+
+Consider a students table with columns id, name, psp, batch_id.
+```
+students
+id  |   name    |   psp     |   batch_id
+```
+We want to get students whose psp is greater than the average psp of their batch.
+```
+SELECT *
+FROM students s
+WHERE psp > (
+    SELECT avg(psp)
+    FROM students e
+    GROUP BY e.batch_id
+    HAVING e.batch_id = s.batch_id
+);
+```
 
 ## Query Optimization
